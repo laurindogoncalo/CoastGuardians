@@ -8,6 +8,14 @@ class Game {
     // Controlador do microfone e dos efeitos sonoros.
     this.audioController = new AudioController();
 
+    // Recursos visuais carregados da pasta assets/images.
+    this.fundoMar = null;
+    this.iconePontuacao = null;
+    this.iconeVidas = null;
+    this.iconeTempo = null;
+    this.iconeMicrofone = null;
+    this.carregarRecursosVisuais();
+
     // Rede controlada pelo rato.
     this.rede = {
       x: width / 2 - 36,
@@ -35,12 +43,75 @@ class Game {
     this.animais = [];
     this.proximoLixo = 0;
 
+    // Efeitos visuais temporários para recolhas e colisões.
+    this.efeitosVisuais = [];
+
     // Proteção breve para não descontar várias vidas
     // enquanto a rede continua em contacto com o mesmo perigo.
     this.proximaColisaoAnimal = 0;
     this.duracaoProtecaoAnimal = 1200;
 
     this.criarObjetosDoNivel();
+  }
+
+  // Carrega o fundo e os ícones PNG do projeto.
+  carregarRecursosVisuais() {
+    this.fundoMar = loadImage(
+      'assets/images/ocean_background.png',
+      () => console.log('Fundo marinho carregado.'),
+      (erro) => console.warn('Não foi possível carregar o fundo marinho:', erro)
+    );
+
+    this.iconePontuacao = loadImage(
+      'assets/images/icon_trophy.png',
+      undefined,
+      (erro) => console.warn('Ícone de pontuação não carregado:', erro)
+    );
+
+    this.iconeVidas = loadImage(
+      'assets/images/icon_heart.png',
+      undefined,
+      (erro) => console.warn('Ícone de vidas não carregado:', erro)
+    );
+
+    this.iconeTempo = loadImage(
+      'assets/images/icon_clock.png',
+      undefined,
+      (erro) => console.warn('Ícone de tempo não carregado:', erro)
+    );
+
+    this.iconeMicrofone = loadImage(
+      'assets/images/icon_microphone.png',
+      undefined,
+      (erro) => console.warn('Ícone de microfone não carregado:', erro)
+    );
+  }
+
+  // Desenha um ícone apenas depois de estar pronto.
+  desenharIcone(imagem, x, y, tamanho) {
+    if (imagem && imagem.width > 0 && imagem.height > 0) {
+      image(imagem, x, y, tamanho, tamanho);
+      return true;
+    }
+    return false;
+  }
+
+  // Pequenas bolhas animadas para dar profundidade ao mar.
+  desenharBolhas() {
+    push();
+    noFill();
+    stroke(225, 250, 255, 105);
+    strokeWeight(1);
+
+    for (let i = 0; i < 12; i++) {
+      const x = 22 + ((i * 71 + frameCount * (0.13 + (i % 3) * 0.025)) % (width - 44));
+      const faixa = Math.max(1, height - 170);
+      const y = 120 + faixa - ((frameCount * (0.42 + (i % 4) * 0.08) + i * 61) % faixa);
+      const tamanho = 3 + (i % 3) * 2;
+      circle(x, y, tamanho);
+    }
+
+    pop();
   }
 
   // ---------- Preparação de cada nível ----------
@@ -158,13 +229,20 @@ class Game {
   mostrarEcraInicial() {
     background('#e8f4f2');
 
-    // A onda fica mais abaixo para não atravessar o botão.
-    noStroke();
-    fill('#0b7285');
-    rect(0, height * 0.77, width, height * 0.23);
-
-    fill('#14919b');
-    ellipse(width / 2, height * 0.78, width * 1.25, height * 0.14);
+    // Usar o mesmo mundo marinho também no menu, com uma camada clara
+    // para manter título e instruções legíveis.
+    if (this.fundoMar && this.fundoMar.width > 0) {
+      image(this.fundoMar, 0, 0, width, height);
+      noStroke();
+      fill(232, 244, 242, 205);
+      rect(0, 0, width, height);
+    } else {
+      noStroke();
+      fill('#0b7285');
+      rect(0, height * 0.77, width, height * 0.23);
+      fill('#14919b');
+      ellipse(width / 2, height * 0.78, width * 1.25, height * 0.14);
+    }
 
     textAlign(CENTER, CENTER);
     fill('#073b4c');
@@ -323,8 +401,14 @@ class Game {
 
     textStyle(NORMAL);
     textSize(12);
-    text(`Pontos: ${this.pontuacao}`, 205, 23);
-    text(`Vidas: ${this.vidas}`, 285, 23);
+
+    // Ícone dourado de pontuação.
+    this.desenharIcone(this.iconePontuacao, 205, 10, 24);
+    text(`Pontos: ${this.pontuacao}`, 232, 23);
+
+    // Coração vermelho para as vidas restantes.
+    this.desenharIcone(this.iconeVidas, 324, 11, 22);
+    text(`Vidas: ${this.vidas}`, 350, 23);
 
     const minutos = floor(tempoRestante / 60);
     const segundos = tempoRestante % 60;
@@ -332,8 +416,12 @@ class Game {
       `${String(minutos).padStart(2, '0')}:` +
       `${String(segundos).padStart(2, '0')}`;
 
-    text(`Tempo: ${tempoFormatado}`, 365, 23);
-    text(`Nível: ${this.nivel}/3`, 465, 23);
+    // Cronómetro azul junto ao temporizador.
+    this.desenharIcone(this.iconeTempo, 414, 10, 24);
+    text(tempoFormatado, 441, 23);
+    textStyle(BOLD);
+    text(`Nível ${this.nivel}/3`, 520, 23);
+    textStyle(NORMAL);
 
     // Segunda linha: saúde costeira.
     textStyle(BOLD);
@@ -356,11 +444,12 @@ class Game {
     fill('#073b4c');
     text(`${Math.round(this.saudeCosteira)}%`, 198, 65);
 
-    // Estado do microfone.
+    // Ícone e estado do microfone.
     textSize(11);
+    this.desenharIcone(this.iconeMicrofone, 249, 53, 24);
     text(
-      `MIC: ${this.audioController.autorizado ? 'DISPONÍVEL' : 'INDISPONÍVEL'}`,
-      255,
+      this.audioController.autorizado ? 'MIC: DISPONÍVEL' : 'MIC: INDISPONÍVEL',
+      276,
       65
     );
 
@@ -376,7 +465,7 @@ class Game {
 
     text(
       `REDE: ${this.audioController.redeAtiva ? 'ATIVA' : 'INATIVA'}`,
-      430,
+      407,
       65
     );
 
@@ -384,13 +473,13 @@ class Game {
       this.audioController.redeAtiva
         ? `${segundosRede}s restantes`
         : 'À espera de som',
-      535,
+      507,
       65
     );
 
     text(
       `Resíduos: ${this.residuosNoNivel}/${this.metasNivel[this.nivel - 1]}`,
-      655,
+      645,
       65
     );
 
@@ -405,10 +494,21 @@ class Game {
       16
     );
 
-    // Área principal de jogo.
+    // Área principal: ilustração marinha gerada para o projeto.
+    // Mantemos um fundo simples se a imagem ainda estiver a carregar.
+    if (this.fundoMar && this.fundoMar.width > 0) {
+      image(this.fundoMar, 0, 112, width, height - 150);
+      this.desenharBolhas();
+    } else {
+      noStroke();
+      fill('#c8ebef');
+      rect(0, 112, width, height - 150);
+    }
+
+    // Rodapé consistente, separado da área onde se movimentam os objetos.
     noStroke();
-    fill('#c8ebef');
-    rect(0, 112, width, height - 150);
+    fill('#d8f0f2');
+    rect(0, height - 38, width, 38);
 
     this.moverRede();
     this.atualizarAnimais();
@@ -430,16 +530,18 @@ class Game {
 
     this.desenharAnimais();
     this.desenharRede();
+    this.atualizarEDesenharEfeitos();
 
     fill('#073b4c');
     textAlign(LEFT, CENTER);
-    textStyle(NORMAL);
+    textStyle(BOLD);
     textSize(12);
     text(
       'Rato: mover a rede | Som: ativar durante 10 segundos',
       16,
       height - 20
     );
+    textStyle(NORMAL);
 
     if (this.vidas <= 0) {
       this.terminarJogo('vidas');
@@ -656,6 +758,98 @@ desenharAnimais() {
     strokeWeight(1);
   }
 
+  // ---------- Feedback visual de recolhas e colisões ----------
+
+  criarEfeitoVisual(x, y, texto, cor, tipo) {
+    const particulas = [];
+    const quantidade = tipo === 'recolha' ? 9 : 11;
+
+    for (let i = 0; i < quantidade; i++) {
+      particulas.push({
+        dx: random(-9, 9),
+        dy: random(-7, 7),
+        vx: random(-1.25, 1.25),
+        vy: random(-2.2, -0.55),
+        tamanho: random(3, tipo === 'recolha' ? 7 : 9),
+        fase: random(TWO_PI)
+      });
+    }
+
+    this.efeitosVisuais.push({
+      x,
+      y,
+      texto,
+      cor,
+      tipo,
+      inicio: millis(),
+      duracao: tipo === 'recolha' ? 850 : 950,
+      particulas
+    });
+  }
+
+  atualizarEDesenharEfeitos() {
+    const agora = millis();
+
+    for (let i = this.efeitosVisuais.length - 1; i >= 0; i--) {
+      const efeito = this.efeitosVisuais[i];
+      const decorrido = agora - efeito.inicio;
+
+      if (decorrido >= efeito.duracao) {
+        this.efeitosVisuais.splice(i, 1);
+        continue;
+      }
+
+      const progresso = decorrido / efeito.duracao;
+      const alfa = 255 * (1 - progresso);
+      const corBolha = color(
+        efeito.tipo === 'recolha' ? '#eaffff' : '#ff6b7c'
+      );
+      corBolha.setAlpha(alfa * 0.9);
+
+      push();
+      noFill();
+      stroke(corBolha);
+      strokeWeight(1.5);
+
+      // Bolhas na recolha; pequenas partículas na penalização.
+      for (const particula of efeito.particulas) {
+        const px = efeito.x + particula.dx + particula.vx * decorrido * 0.045;
+        const py = efeito.y + particula.dy + particula.vy * decorrido * 0.055;
+        const pulso = 1 + Math.sin(progresso * Math.PI + particula.fase) * 0.18;
+        const tamanho = particula.tamanho * pulso * (1 - progresso * 0.25);
+
+        if (efeito.tipo === 'recolha') {
+          circle(px, py - progresso * 9, tamanho);
+        } else {
+          const corParticula = color('#ff6477');
+          corParticula.setAlpha(alfa);
+          noStroke();
+          fill(corParticula);
+          circle(px, py, tamanho);
+          noFill();
+          stroke(corBolha);
+        }
+      }
+
+      // Texto com contorno para continuar legível sobre o fundo do mar.
+      const corTexto = color(efeito.cor);
+      corTexto.setAlpha(alfa);
+      textAlign(CENTER, CENTER);
+      textStyle(BOLD);
+      textSize(efeito.tipo === 'recolha' ? 20 : 17);
+      stroke(7, 59, 76, alfa);
+      strokeWeight(3);
+      fill(corTexto);
+      text(
+        efeito.texto,
+        efeito.x,
+        efeito.y - 22 - progresso * 32
+      );
+
+      pop();
+    }
+  }
+
   // ---------- Colisões ----------
 
   verificarColisoes() {
@@ -674,6 +868,13 @@ desenharAnimais() {
         this.residuosTotal++;
         this.residuosNoNivel++;
         this.audioController.tocarSomRecolha();
+        this.criarEfeitoVisual(
+          objeto.x,
+          objeto.y,
+          '+10',
+          '#ffe36e',
+          'recolha'
+        );
 
         // A saúde melhora um pouco por cada resíduo recolhido.
         this.saudeCosteira = Math.min(
@@ -696,6 +897,13 @@ desenharAnimais() {
         if (this.colideComRede(animal)) {
           this.vidas = Math.max(0, this.vidas - 1);
           this.audioController.tocarSomPerdaVida();
+          this.criarEfeitoVisual(
+            animal.x,
+            animal.y,
+            '-1 VIDA',
+            '#ff5c70',
+            'perigo'
+          );
           this.saudeCosteira = Math.max(0, this.saudeCosteira - 12);
 
           this.proximaColisaoAnimal =
@@ -861,6 +1069,7 @@ desenharAnimais() {
   iniciarProximoNivel() {
   this.nivel++;
   this.residuosNoNivel = 0;
+    this.efeitosVisuais = [];
 
   // Posicionar primeiro a rede.
   this.rede.x = width / 2 - this.rede.largura / 2;
@@ -998,6 +1207,7 @@ this.audioController.mensagem =
 
     this.residuosNoNivel = 0;
     this.residuosTotal = 0;
+    this.efeitosVisuais = [];
 
     this.pontuacao = 0;
     this.vidas = 3;
