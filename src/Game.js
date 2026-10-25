@@ -5,16 +5,18 @@ class Game {
     this.resultadoTipo = '';
     this.nivelConcluido = 1;
 
+    // Controlador do microfone e dos efeitos sonoros.
     this.audioController = new AudioController();
 
+    // Rede controlada pelo rato.
     this.rede = {
-      x: 0,
-      y: 0,
+      x: width / 2 - 36,
+      y: height / 2 - 36,
       largura: 72,
       altura: 72
     };
 
-    // Cada nível tem uma meta própria.
+    // Objetivos por nível: fácil, intermédio e difícil.
     this.metasNivel = [8, 12, 16];
     this.nivel = 1;
     this.residuosNoNivel = 0;
@@ -24,7 +26,7 @@ class Game {
     this.vidas = 3;
     this.saudeCosteira = 35;
 
-    // O temporizador conta apenas quando o estado é "jogo".
+    // O tempo só conta durante a execução do jogo.
     this.duracaoJogo = 150;
     this.tempoUsadoMs = 0;
     this.inicioSegmentoTempo = 0;
@@ -33,7 +35,8 @@ class Game {
     this.animais = [];
     this.proximoLixo = 0;
 
-    // Evita perder várias vidas num único contacto contínuo.
+    // Proteção breve para não descontar várias vidas
+    // enquanto a rede continua em contacto com o mesmo perigo.
     this.proximaColisaoAnimal = 0;
     this.duracaoProtecaoAnimal = 1200;
 
@@ -380,7 +383,7 @@ class Game {
     text(
       this.audioController.redeAtiva
         ? `${segundosRede}s restantes`
-        : 'Faz um som para ativar',
+        : 'À espera de som',
       535,
       65
     );
@@ -433,7 +436,7 @@ class Game {
     textStyle(NORMAL);
     textSize(12);
     text(
-      'Rato: mover a rede | Som: ativar durante 30 segundos',
+      'Rato: mover a rede | Som: ativar durante 10 segundos',
       16,
       height - 20
     );
@@ -502,22 +505,115 @@ class Game {
     }
   }
 
-  desenharAnimais() {
-    for (const animal of this.animais) {
-      stroke('#52616b');
-      strokeWeight(1.5);
-      fill('#ffffff');
-      circle(animal.x, animal.y, animal.tamanho);
+  
+desenharAnimais() {
+  for (let i = 0; i < this.animais.length; i++) {
+    const animal = this.animais[i];
 
+    // Animação suave para dar vida aos animais.
+    const flutuacao = sin(frameCount * 0.05 + i) * 2;
+
+    push();
+    translate(animal.x, animal.y + flutuacao);
+    strokeWeight(1.5);
+
+    // PEIXE
+    if (i % 3 === 0) {
+      stroke('#9a6737');
+      fill('#efb866');
+
+      // Cauda
+      triangle(-12, 0, -27, -10, -27, 10);
+
+      // Corpo
+      ellipse(0, 0, 36, 24);
+
+      // Barbatana superior
+      fill('#dfa04b');
+      triangle(-5, -8, 2, -17, 9, -8);
+
+      // Olho
       noStroke();
+      fill('#ffffff');
+      circle(10, -3, 7);
+
       fill('#073b4c');
-      textAlign(CENTER, CENTER);
-      textStyle(BOLD);
-      textSize(9);
-      text('ANIMAL', animal.x, animal.y);
+      circle(11, -3, 3);
+
+      // Brânquias
+      stroke('#b47838');
+      line(4, -5, 3, 5);
     }
 
-    textStyle(NORMAL);
+    // TARTARUGA
+    else if (i % 3 === 1) {
+      // Patas
+      stroke('#39755d');
+      fill('#91c8a4');
+
+      ellipse(-10, -12, 13, 9);
+      ellipse(-10, 12, 13, 9);
+      ellipse(7, -12, 13, 9);
+      ellipse(7, 12, 13, 9);
+
+      // Cabeça
+      ellipse(21, 0, 14, 12);
+
+      // Carapaça
+      stroke('#39755d');
+      fill('#4e9879');
+      ellipse(-2, 0, 32, 26);
+
+      // Padrão da carapaça
+      stroke('#c5e5c8');
+      noFill();
+      ellipse(-2, 0, 19, 17);
+      line(-2, -8, -2, 8);
+      line(-10, 0, 6, 0);
+
+      // Olho
+      noStroke();
+      fill('#073b4c');
+      circle(23, -2, 2.5);
+    }
+
+    // MEDUSA
+    else {
+      // Tentáculos
+      stroke('#8273b6');
+      strokeWeight(2);
+
+      line(-11, 5, -14, 17);
+      line(-4, 7, -3, 20);
+      line(4, 7, 7, 18);
+      line(11, 5, 15, 15);
+
+      // Corpo
+      stroke('#8273b6');
+      strokeWeight(1.5);
+      fill('#c5b8ee');
+
+      arc(0, 0, 38, 34, PI, TWO_PI, CHORD);
+
+      // Parte inferior
+      noStroke();
+      fill('#a99add');
+      ellipse(0, 0, 33, 9);
+
+      // Reflexos
+      fill('#ffffff');
+      circle(-7, -5, 4);
+      circle(2, -9, 3);
+      circle(9, -4, 4);
+    }
+
+    pop();
+  }
+
+  // Restaurar o estilo normal do texto.
+  textStyle(NORMAL);
+
+
   }
 
   // ---------- Desenho da rede ----------
@@ -763,27 +859,30 @@ class Game {
   }
 
   iniciarProximoNivel() {
-    this.nivel++;
-    this.residuosNoNivel = 0;
+  this.nivel++;
+  this.residuosNoNivel = 0;
 
-    this.criarObjetosDoNivel();
+  // Posicionar primeiro a rede.
+  this.rede.x = width / 2 - this.rede.largura / 2;
+  this.rede.y = height / 2 - this.rede.altura / 2;
 
-    // Cada novo nível exige uma nova ativação sonora.
-    this.audioController.redeAtiva = false;
-    this.audioController.ativacaoTerminaEm = 0;
+  // Criar os objetos longe da posição inicial da rede.
+  this.criarObjetosDoNivel();
 
-    // A histerese continua a exigir que o som baixe antes de
-    // reconhecer uma nova ativação.
-    if (this.audioController.volume <= this.audioController.limiarDesativar) {
-      this.audioController.somPronto = true;
-    }
-
-    this.rede.x = width / 2 - this.rede.largura / 2;
-    this.rede.y = height / 2 - this.rede.altura / 2;
-
-    this.inicioSegmentoTempo = millis();
-    this.estado = 'jogo';
+  this.audioController.redeAtiva = false;
+  this.audioController.ativacaoTerminaEm = 0;
+this.audioController.mensagem =
+  'Nível iniciado. Faz um som para ativar a rede.';
+  if (
+    this.audioController.volume <=
+    this.audioController.limiarDesativar
+  ) {
+    this.audioController.somPronto = true;
   }
+
+  this.inicioSegmentoTempo = millis();
+  this.estado = 'jogo';
+}
 
   // ---------- Fim de jogo ----------
 

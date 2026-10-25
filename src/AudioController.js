@@ -1,4 +1,5 @@
-
+// Controla o microfone e reproduz efeitos sonoros a partir de ficheiros WAV.
+// Os ficheiros de áudio do projeto estão em assets/audio/.
 class AudioController {
   constructor() {
     this.microfone = null;
@@ -9,7 +10,7 @@ class AudioController {
     this.pronto = false;
     this.erro = false;
 
-    // Estado da rede.
+    // Estado da rede: mantém os 10 segundos escolhidos para o jogo.
     this.redeAtiva = false;
     this.duracaoAtivacao = 10000;
     this.ativacaoTerminaEm = 0;
@@ -17,21 +18,67 @@ class AudioController {
     // Medição do som ambiente.
     this.volume = 0;
     this.ruidoAmbiente = 0;
-
     this.limiarAtivar = 0.055;
     this.limiarDesativar = 0.03;
 
+    // Calibração do ruído de fundo durante 3 segundos.
     this.duracaoCalibracao = 3000;
     this.inicioCalibracao = 0;
     this.somaVolume = 0;
     this.totalAmostras = 0;
 
+    // Histerese: só volta a aceitar um som quando o volume baixa.
     this.somPronto = false;
 
-    // Evita tocar muitos sons de recolha ao mesmo tempo.
+    // Ficheiros de som.
+    this.somRecolha = null;
+    this.somPerdaVida = null;
+    this.somRecolhaCarregado = false;
+    this.somPerdaVidaCarregado = false;
     this.ultimoSomRecolha = 0;
+    this.erroCarregamentoAudio = false;
 
     this.mensagem = 'Clica em COMEÇAR JOGO para iniciar.';
+
+    this.carregarEfeitosSonoros();
+  }
+
+  carregarEfeitosSonoros() {
+    if (typeof loadSound !== 'function') {
+      this.erroCarregamentoAudio = true;
+      console.error(
+        'p5.sound não está carregado. Confirma o script p5.sound no index.html.'
+      );
+      return;
+    }
+
+    this.somRecolha = loadSound(
+      'assets/audio/recolha.wav',
+      () => {
+        this.somRecolhaCarregado = true;
+        this.somRecolha.setVolume(0.5);
+        this.somRecolha.playMode('restart');
+        console.log('Som de recolha carregado.');
+      },
+      (erro) => {
+        this.erroCarregamentoAudio = true;
+        console.error('Não foi possível carregar assets/audio/recolha.wav', erro);
+      }
+    );
+
+    this.somPerdaVida = loadSound(
+      'assets/audio/perda_vida.wav',
+      () => {
+        this.somPerdaVidaCarregado = true;
+        this.somPerdaVida.setVolume(0.6);
+        this.somPerdaVida.playMode('restart');
+        console.log('Som de perda de vida carregado.');
+      },
+      (erro) => {
+        this.erroCarregamentoAudio = true;
+        console.error('Não foi possível carregar assets/audio/perda_vida.wav', erro);
+      }
+    );
   }
 
   iniciar() {
@@ -45,7 +92,7 @@ class AudioController {
     ) {
       this.erro = true;
       this.mensagem =
-        'A biblioteca de áudio não carregou. Verifica a Internet.';
+        'A biblioteca de áudio não carregou. Verifica a ligação à Internet.';
       return;
     }
 
@@ -62,14 +109,12 @@ class AudioController {
 
     try {
       userStartAudio();
-
       this.microfone = new p5.AudioIn();
 
       this.microfone.start(
         () => {
           this.autorizado = true;
           this.calibrando = true;
-
           this.inicioCalibracao = millis();
           this.somaVolume = 0;
           this.totalAmostras = 0;
@@ -94,7 +139,6 @@ class AudioController {
       this.erro = true;
       this.mensagem =
         'Erro ao iniciar o microfone. Verifica a consola.';
-
       console.error('Erro ao iniciar o microfone:', erro);
     }
   }
@@ -107,7 +151,6 @@ class AudioController {
     const agora = millis();
     this.volume = this.microfone.getLevel();
 
-    // Calibração do ruído ambiente durante 3 segundos.
     if (this.calibrando) {
       this.somaVolume += this.volume;
       this.totalAmostras++;
@@ -128,10 +171,8 @@ class AudioController {
           this.limiarAtivar * 0.55
         );
 
-        // Garantir que o limiar de desligar é inferior.
         if (this.limiarDesativar >= this.limiarAtivar) {
-          this.limiarDesativar =
-            this.limiarAtivar * 0.7;
+          this.limiarDesativar = this.limiarAtivar * 0.7;
         }
 
         this.calibrando = false;
@@ -150,7 +191,6 @@ class AudioController {
       return;
     }
 
-    // A ativação termina quando acabam os 30 segundos.
     if (
       this.redeAtiva &&
       agora >= this.ativacaoTerminaEm
@@ -160,13 +200,10 @@ class AudioController {
         'Tempo terminado. Faz um novo som para reativar a rede.';
     }
 
-    // O sistema fica preparado para outro som quando
-    // o volume regressa ao limiar inferior.
     if (this.volume <= this.limiarDesativar) {
       this.somPronto = true;
     }
 
-    // Histerese: o som precisa de ultrapassar o limiar superior.
     if (
       this.somPronto &&
       this.volume >= this.limiarAtivar
@@ -175,17 +212,14 @@ class AudioController {
 
       if (!this.redeAtiva) {
         this.redeAtiva = true;
-        this.ativacaoTerminaEm =
-          agora + this.duracaoAtivacao;
+        this.ativacaoTerminaEm = agora + this.duracaoAtivacao;
       }
     }
 
     if (this.redeAtiva) {
       const segundosRestantes = Math.max(
         0,
-        Math.ceil(
-          (this.ativacaoTerminaEm - agora) / 1000
-        )
+        Math.ceil((this.ativacaoTerminaEm - agora) / 1000)
       );
 
       this.mensagem =
@@ -193,78 +227,44 @@ class AudioController {
     }
   }
 
-  // Som curto e ascendente quando recolhemos resíduos.
+  // Reproduz o ficheiro WAV de recolha.
   tocarSomRecolha() {
     const agora = millis();
 
-    // Evitar uma sobreposição de sons se dois objetos
-    // forem recolhidos praticamente ao mesmo tempo.
+    // Evita um som repetido em vários frames muito próximos.
     if (agora - this.ultimoSomRecolha < 100) {
       return;
     }
 
     this.ultimoSomRecolha = agora;
-
-    this.tocarEfeito(520, 880, 0.16, 'sine', 0.075);
+    this.reproduzirFicheiro(this.somRecolha, 0.5, 'recolha');
   }
 
-  // Som grave e descendente quando perdemos uma vida.
+  // Reproduz o ficheiro WAV de perda de vida.
   tocarSomPerdaVida() {
-    this.tocarEfeito(260, 85, 0.38, 'triangle', 0.11);
+    this.reproduzirFicheiro(this.somPerdaVida, 0.6, 'perda de vida');
   }
 
-  // Gera um efeito sonoro sem precisar de ficheiros externos.
-  tocarEfeito(frequenciaInicial, frequenciaFinal,
-              duracao, tipo, volume) {
+  reproduzirFicheiro(som, volume, nome) {
     try {
-      const contexto = getAudioContext();
+      if (!som || !som.isLoaded()) {
+        console.warn(`O som de ${nome} ainda não está carregado.`);
+        return;
+      }
 
-      // O jogo já deve ter sido iniciado por um clique.
-      if (contexto.state === 'suspended') {
+      // O áudio já foi desbloqueado pelo clique em COMEÇAR JOGO.
+      if (typeof userStartAudio === 'function') {
         userStartAudio();
       }
 
-      const agora = contexto.currentTime;
-      const oscilador = contexto.createOscillator();
-      const ganho = contexto.createGain();
+      if (som.isPlaying()) {
+        som.stop();
+      }
 
-      oscilador.type = tipo;
-
-      oscilador.frequency.setValueAtTime(
-        frequenciaInicial,
-        agora
-      );
-
-      oscilador.frequency.exponentialRampToValueAtTime(
-        frequenciaFinal,
-        agora + duracao * 0.8
-      );
-
-      // Entrada e saída suaves para evitar estalidos.
-      ganho.gain.setValueAtTime(0.0001, agora);
-
-      ganho.gain.exponentialRampToValueAtTime(
-        volume,
-        agora + 0.02
-      );
-
-      ganho.gain.exponentialRampToValueAtTime(
-        0.0001,
-        agora + duracao
-      );
-
-      oscilador.connect(ganho);
-      ganho.connect(contexto.destination);
-
-      oscilador.start(agora);
-      oscilador.stop(agora + duracao + 0.02);
-
-      oscilador.onended = () => {
-        oscilador.disconnect();
-        ganho.disconnect();
-      };
+      som.setVolume(volume);
+      som.play();
     } catch (erro) {
-      console.warn('Não foi possível reproduzir o som:', erro);
+      console.error(`Erro ao reproduzir som de ${nome}:`, erro);
     }
   }
 
@@ -274,8 +274,7 @@ class AudioController {
     }
 
     return constrain(
-      (millis() - this.inicioCalibracao) /
-        this.duracaoCalibracao,
+      (millis() - this.inicioCalibracao) / this.duracaoCalibracao,
       0,
       1
     );
@@ -285,6 +284,14 @@ class AudioController {
     if (this.microfone) {
       this.microfone.stop();
       this.microfone = null;
+    }
+
+    if (this.somRecolha && this.somRecolha.isLoaded()) {
+      this.somRecolha.stop();
+    }
+
+    if (this.somPerdaVida && this.somPerdaVida.isLoaded()) {
+      this.somPerdaVida.stop();
     }
 
     this.iniciado = false;
