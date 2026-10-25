@@ -8,9 +8,18 @@ function setup() {
   ajustarCanvas();
 }
 
+
+
 function draw() {
-  if (jogo) jogo.desenhar();
+  if (!jogo) return;
+
+  // Desenha o estado atual do jogo.
+  jogo.desenhar();
+
+  // Desenha a identificação por cima do ecrã.
+  jogo.desenharIdentificacao();
 }
+
 
 // Os cliques permitem iniciar o jogo e pedir acesso ao microfone.
 function mousePressed() {

@@ -22,6 +22,8 @@ class Game {
       y: height / 2 - 36,
       largura: 72,
       altura: 72
+
+  
     };
 
     // Objetivos por nível: fácil, intermédio e difícil.
@@ -208,6 +210,7 @@ class Game {
     if (this.estado === 'menu') {
       this.mostrarEcraInicial();
       return;
+      this.desenharIdentificacao();
     }
 
     if (this.estado === 'calibracao') {
@@ -216,6 +219,7 @@ class Game {
       if (this.audioController.erro || !this.audioController.pronto) {
         this.mostrarEcraCalibracao();
         return;
+        this.desenharIdentificacao();
       }
 
       // O tempo só começa depois da calibração.
@@ -232,6 +236,8 @@ class Game {
     if (this.estado === 'nivelConcluido') {
       this.mostrarNivelConcluido();
       return;
+      this.desenharIdentificacao();
+      this.desenharIdentificacao();
     }
 
     if (this.estado === 'resultado') {
@@ -367,6 +373,7 @@ class Game {
     if (tempoRestante <= 0) {
       this.terminarJogo('tempo');
       return;
+      this.desenharIdentificacao();
     }
 
     background('#d8f0f2');
@@ -1192,5 +1199,55 @@ this.audioController.mensagem =
     this.rede.y = height / 2 - this.rede.altura / 2;
 
     this.criarObjetosDoNivel();
+  }
+   
+desenharIdentificacao() {
+  const alturaRodape = 38;
+
+  // Rodapé comum a todos os ecrãs.
+  rectMode(CORNER);
+  noStroke();
+  fill('#d9f1f2');
+  rect(0, height - alturaRodape, width, alturaRodape);
+
+  fill('#073b4c');
+  textStyle(NORMAL);
+  textSize(10);
+
+  // Manter as instruções visíveis durante a partida.
+  if (this.estado === 'jogo') {
+    textAlign(LEFT, CENTER);
+    textStyle(BOLD);
+    textSize(11);
+
+    text(
+      'Rato: mover a rede | Som: ativar durante 10 segundos',
+      12,
+      height - 27
+    );
+  }
+
+  // Tema atribuído, no canto inferior esquerdo.
+  textStyle(NORMAL);
+  textSize(10);
+  textAlign(LEFT, CENTER);
+
+  text(
+    'Coastal Zone Protection',
+    12,
+    height - 10
+  );
+
+  // Identificação do estudante, no canto inferior direito.
+  textAlign(RIGHT, CENTER);
+
+  text(
+    'Laurindo Samunga Gonçalo | N.º 33054 | ECGM',
+    width - 12,
+    height - 10
+  );
+
+  textAlign(LEFT, CENTER);
+
   }
 }
