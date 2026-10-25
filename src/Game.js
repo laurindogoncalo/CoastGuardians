@@ -96,6 +96,21 @@ class Game {
     return false;
   }
 
+  // Fundo coerente para os ecrãs de menu, calibração e resultado.
+  desenharFundoEcras(opacidade = 205) {
+    if (this.fundoMar && this.fundoMar.width > 0) {
+      imageMode(CORNER);
+      image(this.fundoMar, 0, 0, width, height);
+    } else {
+      background('#d8f0f2');
+    }
+
+    noStroke();
+    fill(232, 244, 242, opacidade);
+    rectMode(CORNER);
+    rect(0, 0, width, height);
+  }
+
   // Pequenas bolhas animadas para dar profundidade ao mar.
   desenharBolhas() {
     push();
@@ -227,22 +242,13 @@ class Game {
   // ---------- Ecrã inicial ----------
 
   mostrarEcraInicial() {
-    background('#e8f4f2');
+    this.desenharFundoEcras(185);
 
-    // Usar o mesmo mundo marinho também no menu, com uma camada clara
-    // para manter título e instruções legíveis.
-    if (this.fundoMar && this.fundoMar.width > 0) {
-      image(this.fundoMar, 0, 0, width, height);
-      noStroke();
-      fill(232, 244, 242, 205);
-      rect(0, 0, width, height);
-    } else {
-      noStroke();
-      fill('#0b7285');
-      rect(0, height * 0.77, width, height * 0.23);
-      fill('#14919b');
-      ellipse(width / 2, height * 0.78, width * 1.25, height * 0.14);
-    }
+    // Cartão translúcido para separar o conteúdo do cenário.
+    rectMode(CORNER);
+    noStroke();
+    fill(248, 253, 252, 215);
+    rect(width * 0.09, height * 0.10, width * 0.82, height * 0.78, 18);
 
     textAlign(CENTER, CENTER);
     fill('#073b4c');
@@ -255,27 +261,14 @@ class Game {
     text('Coastal Zone Protection', width / 2, height * 0.33);
 
     textSize(15);
-    text(
-      'Recolhe resíduos e protege os animais marinhos.',
-      width / 2,
-      height * 0.42
-    );
-
-    text(
-      'Move a rede com o rato e ativa-a com um som.',
-      width / 2,
-      height * 0.47
-    );
+    text('Recolhe resíduos e protege os animais marinhos.', width / 2, height * 0.42);
+    text('Move a rede com o rato e ativa-a com um som.', width / 2, height * 0.47);
 
     textStyle(BOLD);
     textSize(14);
-    text(
-      '3 níveis: fácil, intermédio e difícil',
-      width / 2,
-      height * 0.53
-    );
+    text('3 níveis: fácil, intermédio e difícil', width / 2, height * 0.53);
 
-    // Botão de início.
+    // Botão com a mesma área ativa já usada em tratarClique().
     rectMode(CENTER);
     noStroke();
     fill('#073b4c');
@@ -287,21 +280,22 @@ class Game {
     text('COMEÇAR JOGO', width / 2, height * 0.62);
 
     rectMode(CORNER);
-
     textStyle(NORMAL);
     fill('#073b4c');
     textSize(12);
-    text(
-      'O microfone será calibrado durante 3 segundos.',
-      width / 2,
-      height * 0.70
-    );
+    text('O microfone será calibrado durante 3 segundos.', width / 2, height * 0.70);
   }
 
-  // ---------- Calibração do microfone ----------
+    // ---------- Calibração do microfone ----------
 
   mostrarEcraCalibracao() {
-    background('#e8f4f2');
+    this.desenharFundoEcras(185);
+
+    // Cartão claro para manter as instruções legíveis sobre a imagem.
+    rectMode(CORNER);
+    noStroke();
+    fill(248, 253, 252, 232);
+    rect(width * 0.12, height * 0.18, width * 0.76, height * 0.62, 18);
 
     textAlign(CENTER, CENTER);
     fill('#073b4c');
@@ -311,20 +305,11 @@ class Game {
 
     textStyle(NORMAL);
     textSize(15);
+    text(this.audioController.mensagem, 45, height * 0.40, width - 90, 55);
 
-    // IMPORTANTE: a caixa de texto começa à esquerda da tela.
-    // Se começasse em width / 2, a mensagem ficaria cortada.
-    text(
-      this.audioController.mensagem,
-      30,
-      height * 0.40,
-      width - 60,
-      65
-    );
-
-    const larguraBarra = Math.min(360, width - 80);
+    const larguraBarra = Math.min(360, width - 100);
     const xBarra = (width - larguraBarra) / 2;
-    const yBarra = height * 0.56;
+    const yBarra = height * 0.55;
 
     noStroke();
     fill('#c8d7d6');
@@ -341,18 +326,16 @@ class Game {
 
     fill(this.audioController.erro ? '#a3332b' : '#52616b');
     textSize(13);
-
     let instrucoes = 'Mantém o ambiente silencioso durante 3 segundos.';
     if (this.audioController.erro) {
       instrucoes = 'Verifica a permissão do microfone e clica para tentar novamente.';
     } else if (this.audioController.pronto) {
       instrucoes = 'Calibração concluída.';
     }
-
-    text(instrucoes, 30, height * 0.64, width - 60, 42);
+    text(instrucoes, 45, height * 0.64, width - 90, 40);
   }
 
-  // ---------- Temporizador ----------
+    // ---------- Temporizador ----------
 
   obterTempoRestante() {
     let tempoDecorrido = this.tempoUsadoMs;
@@ -994,79 +977,51 @@ desenharAnimais() {
   }
 
   mostrarNivelConcluido() {
-    background('#e8f4f2');
+    this.desenharFundoEcras(190);
+
+    rectMode(CORNER);
+    noStroke();
+    fill(248, 253, 252, 232);
+    rect(width * 0.10, height * 0.12, width * 0.80, height * 0.76, 18);
 
     textAlign(CENTER, CENTER);
     fill('#073b4c');
     textStyle(BOLD);
     textSize(32);
-
-    text(
-      `Nível ${this.nivelConcluido} concluído!`,
-      width / 2,
-      height * 0.23
-    );
+    text(`Nível ${this.nivelConcluido} concluído!`, width / 2, height * 0.23);
 
     textStyle(NORMAL);
     textSize(18);
-
     text(
       `Recolheste ${this.metasNivel[this.nivelConcluido - 1]} resíduos nesta fase.`,
       width / 2,
       height * 0.34
     );
+    text(`Pontuação: ${this.pontuacao}  |  Vidas: ${this.vidas}`, width / 2, height * 0.42);
+    text(`Tempo restante: ${this.obterTempoRestante()} segundos`, width / 2, height * 0.49);
 
-    text(
-      `Pontuação: ${this.pontuacao}  |  Vidas: ${this.vidas}`,
-      width / 2,
-      height * 0.42
-    );
-
-    text(
-      `Tempo restante: ${this.obterTempoRestante()} segundos`,
-      width / 2,
-      height * 0.49
-    );
-
-    let descricao = '';
-
-    if (this.nivelConcluido === 1) {
-      descricao = 'No próximo nível, os animais começam a mover-se.';
-    } else {
-      descricao = 'No próximo nível, os animais aproximam-se da rede.';
-    }
-
+    const descricao = this.nivelConcluido === 1
+      ? 'No próximo nível, os animais começam a mover-se.'
+      : 'No próximo nível, os animais aproximam-se da rede.';
     text(descricao, width / 2, height * 0.56);
 
     rectMode(CENTER);
-    noStroke();
     fill('#073b4c');
     rect(width / 2, height * 0.68, 300, 48, 8);
 
     fill('#ffffff');
     textStyle(BOLD);
     textSize(15);
-
-    text(
-      `COMEÇAR NÍVEL ${this.nivelConcluido + 1}`,
-      width / 2,
-      height * 0.68
-    );
+    text(`COMEÇAR NÍVEL ${this.nivelConcluido + 1}`, width / 2, height * 0.68);
 
     rectMode(CORNER);
-
     fill('#52616b');
     textStyle(NORMAL);
     textSize(12);
-
-    text(
-      'A fase seguinte só começa quando clicares no botão.',
-      width / 2,
-      height * 0.77
-    );
+    text('A fase seguinte só começa quando clicares no botão.', width / 2, height * 0.77);
   }
 
-  iniciarProximoNivel() {
+    iniciarProximoNivel() {
   this.nivel++;
   this.residuosNoNivel = 0;
     this.efeitosVisuais = [];
@@ -1108,30 +1063,45 @@ this.audioController.mensagem =
   }
 
   mostrarResultado() {
-    background('#e8f4f2');
+    this.desenharFundoEcras(195);
+
+    rectMode(CORNER);
+    noStroke();
+    fill(248, 253, 252, 235);
+    rect(width * 0.12, height * 0.10, width * 0.76, height * 0.80, 18);
 
     textAlign(CENTER, CENTER);
     fill('#073b4c');
     textStyle(BOLD);
-    textSize(36);
+    textSize(34);
 
     if (this.resultadoTipo === 'vitoria') {
-      text('Missão concluída!', width / 2, height * 0.23);
+      text('Missão concluída!', width / 2, height * 0.22);
     } else if (this.resultadoTipo === 'vidas') {
-      text('Ficaste sem vidas!', width / 2, height * 0.23);
+      text('Ficaste sem vidas!', width / 2, height * 0.22);
     } else if (this.resultadoTipo === 'saude') {
-      text('A costa ficou em perigo!', width / 2, height * 0.23);
+      text('A costa ficou em perigo!', width / 2, height * 0.22);
     } else {
-      text('Tempo esgotado!', width / 2, height * 0.23);
+      text('Tempo esgotado!', width / 2, height * 0.22);
     }
 
     textStyle(NORMAL);
-    textSize(21);
+    textSize(20);
+    text(`Pontuação final: ${this.pontuacao}`, width / 2, height * 0.35);
+    text(`Resíduos recolhidos: ${this.residuosTotal}`, width / 2, height * 0.42);
+    text(`Nível alcançado: ${this.nivel}/3`, width / 2, height * 0.49);
+    text(`Saúde costeira: ${Math.round(this.saudeCosteira)}%`, width / 2, height * 0.56);
 
-    text(`Pontuação final: ${this.pontuacao}`, width / 2, height * 0.36);
-    text(`Resíduos recolhidos: ${this.residuosTotal}`, width / 2, height * 0.43);
-    text(`Nível alcançado: ${this.nivel}/3`, width / 2, height * 0.50);
-    text(`Saúde costeira: ${Math.round(this.saudeCosteira)}%`, width / 2, height * 0.57);
+    // Mensagem diferente para vitória e derrota.
+    textSize(14);
+    fill('#52616b');
+    text(
+      this.resultadoTipo === 'vitoria'
+        ? 'Conseguiste proteger a costa. Bom trabalho!'
+        : 'Tenta novamente e protege melhor a vida marinha.',
+      width / 2,
+      height * 0.62
+    );
 
     rectMode(CENTER);
     noStroke();
@@ -1146,7 +1116,7 @@ this.audioController.mensagem =
     rectMode(CORNER);
   }
 
-  // ---------- Tratamento dos cliques ----------
+    // ---------- Tratamento dos cliques ----------
 
   tratarClique() {
     if (this.estado === 'menu') {
